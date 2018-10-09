@@ -16,7 +16,7 @@ class Sample(gym.Env):
 
     def __init__(self):
         # world param
-        self.map_size = 200   # [cell]
+        self.map_size = 100   # [cell]
         self.xyreso   = 0.25  # [m] 
         self.dt = 0.1 # [s]
 
@@ -140,8 +140,20 @@ class Sample(gym.Env):
         # obstacle
         ox = np.array((np.random.rand(10) * self.map_size), dtype=np.int32)
         oy = np.array((np.random.rand(10) * self.map_size), dtype=np.int32)
+
+        # for ix, iy in zip(ox, oy):
+        #    if not grid_map[ix][iy]:
+        #        grid_map[ix][iy] = 2
+
+        wall = np.where(grid_map)
         for ix, iy in zip(ox, oy):
-            if not grid_map[ix][iy]:
+            min_distance = self.map_size*self.xyreso
+            for wx, wy in zip(wall[0], wall[1]):
+                distance = math.sqrt((wx-ix)**2+(wy-iy)**2)*self.xyreso
+                if distance < min_distance:
+                    min_distance = distance
+            print(min_distance)
+            if not grid_map[ix][iy] and self.robot_radius*4<min_distance:
                 grid_map[ix][iy] = 2
 
         return grid_map
@@ -186,8 +198,8 @@ class Sample(gym.Env):
         return flag
 
     def render(self, mode='human', close=False):
-        screen_width  = 1000
-        screen_height = 1000
+        screen_width  = 600
+        screen_height = 600
         scale_width = screen_width / float(self.map_size)
         scale_height = screen_height / float(self.map_size)
 
