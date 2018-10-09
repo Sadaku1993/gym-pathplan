@@ -56,4 +56,3 @@ import gym
 
 env = gym.make('myenv-v0')
 ```
-# gym-pathplan
