@@ -8,6 +8,7 @@ env = gym.make('Sample-v0')
 print("action space", env.action_space)
 print("action space low",  env.action_space.low)
 print("action space high", env.action_space.high)
+print(" ")
 
 
 ## observation info

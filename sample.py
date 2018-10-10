@@ -9,10 +9,12 @@ observation = env.reset()
 print('start', observation['state'])
 print('goal', observation['goal'])
 
+env.show()
+
 for _ in range(1000):
     env.render()
-    action = env.action_space.sample()
-    # action = np.array([1.0, 0.0])
+    # action = env.action_space.sample()
+    action = np.array([0.1, 0.])
     observation, reward, done, _  = env.step(action)
     # print('state',  observation['state'])
     # print('reward', reward)

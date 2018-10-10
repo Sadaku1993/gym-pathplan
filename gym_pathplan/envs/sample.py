@@ -72,8 +72,26 @@ class Sample(gym.Env):
             goal  = np.array((np.random.rand(2) * self.map_size), dtype=np.int32) # [y]
             # yaw = np.random.rand(1) * math.pi * 2
 
+            obstacle = np.where(self.map)
+            s_min_distance = self.map_size*self.xyreso
+            g_min_distance = self.map_size*self.xyreso
+
+            for ox, oy in zip(obstacle[0], obstacle[1]):
+                s_distance = math.sqrt((start[0]-ox)**2+(start[1]-oy)**2)*self.xyreso
+                g_distance = math.sqrt((goal[0]-oy)**2+(goal[1]-oy)**2)*self.xyreso
+                if s_distance < s_min_distance:
+                    s_min_distance = s_distance
+                if g_distance < g_min_distance:
+                    g_min_distance = g_distance
+
+            # print("s_min_distance:", s_min_distance)
+            # print("g_min_distance:", g_min_distance)
+            # print("min_distance", self.robot_radius*4)
+
             if self.map[start[0]][start[1]] or self.map[goal[0]][goal[1]]:
                 print("obstacle is put")
+            elif s_min_distance<self.robot_radius*4 or g_min_distance<self.robot_radius*4:
+                print("obstacle is near")
             elif np.all(start==goal):
                 print("start and goal position is same")
             else:
@@ -122,7 +140,7 @@ class Sample(gym.Env):
             reward = -1
 
         return reward
-    
+
     def reset_map(self):
         grid_map = np.zeros((self.map_size,self.map_size), dtype=np.int32)
         # wall
@@ -132,19 +150,16 @@ class Sample(gym.Env):
         for j in range(0,self.map_size):
             grid_map[0][j] = 1
             grid_map[self.map_size-1][j] = 1
-        # wall
-        for i in range(0, self.map_size/4):
-            grid_map[i][self.map_size/2] = 1
-            grid_map[i+self.map_size/4*3][self.map_size/2] = 1
         
+        # 真ん中あたりの壁
+        height = 1
+        width = int(self.map_size*0.25)
+        self.make_rectangle(grid_map, 0, self.map_size/2-height/2, width, height, 1)
+        self.make_rectangle(grid_map, int(self.map_size*0.75), self.map_size/2-height/2, width, height, 1)
+
         # obstacle
         ox = np.array((np.random.rand(10) * self.map_size), dtype=np.int32)
         oy = np.array((np.random.rand(10) * self.map_size), dtype=np.int32)
-
-        # for ix, iy in zip(ox, oy):
-        #    if not grid_map[ix][iy]:
-        #        grid_map[ix][iy] = 2
-
         wall = np.where(grid_map)
         for ix, iy in zip(ox, oy):
             min_distance = self.map_size*self.xyreso
@@ -152,7 +167,6 @@ class Sample(gym.Env):
                 distance = math.sqrt((wx-ix)**2+(wy-iy)**2)*self.xyreso
                 if distance < min_distance:
                     min_distance = distance
-            print(min_distance)
             if not grid_map[ix][iy] and self.robot_radius*4<min_distance:
                 grid_map[ix][iy] = 2
 
@@ -208,8 +222,7 @@ class Sample(gym.Env):
             self.viewer = rendering.Viewer(screen_width, screen_height)
 
             # wall
-            wall = rendering.make_capsule(screen_width, 
-                                          self.robot_radius/self.xyreso*scale_width*2)
+            wall = rendering.make_capsule(screen_width, 4)
             self.walltrans = rendering.Transform()
             wall.add_attr(self.walltrans)
             wall.set_color(0.2, 0.4, 1.0)
@@ -217,8 +230,7 @@ class Sample(gym.Env):
             self.walltrans.set_rotation(0)
             self.viewer.add_geom(wall)
 
-            wall = rendering.make_capsule(screen_width, 
-                                          self.robot_radius/self.xyreso*scale_width*2)
+            wall = rendering.make_capsule(screen_width, 4)
             self.walltrans = rendering.Transform()
             wall.add_attr(self.walltrans)
             wall.set_color(0.2, 0.4, 1.0)
@@ -226,8 +238,7 @@ class Sample(gym.Env):
             self.walltrans.set_rotation(math.pi/2)
             self.viewer.add_geom(wall)
 
-            wall = rendering.make_capsule(screen_width, 
-                                          self.robot_radius/self.xyreso*scale_width*2)
+            wall = rendering.make_capsule(screen_width, 4)
             self.walltrans = rendering.Transform()
             wall.add_attr(self.walltrans)
             wall.set_color(0.2, 0.4, 1.0)
@@ -235,8 +246,7 @@ class Sample(gym.Env):
             self.walltrans.set_rotation(0)
             self.viewer.add_geom(wall)
 
-            wall = rendering.make_capsule(screen_width, 
-                                          self.robot_radius/self.xyreso*scale_width*2)
+            wall = rendering.make_capsule(screen_width, 4)
             self.walltrans = rendering.Transform()
             wall.add_attr(self.walltrans)
             wall.set_color(0.2, 0.4, 1.0)
@@ -263,7 +273,7 @@ class Sample(gym.Env):
             self.viewer.add_geom(wall)
 
             # goal
-            goal = rendering.make_circle(self.robot_radius/self.xyreso*scale_width*1.5)
+            goal = rendering.make_circle(self.robot_radius/self.xyreso*scale_width)
             self.goaltrans = rendering.Transform()
             goal.add_attr(self.goaltrans)
             goal.set_color(1.0, 0.0, 0.0)
@@ -301,12 +311,23 @@ class Sample(gym.Env):
         self.orientationtrans.set_translation(robot_x, robot_y)
         self.orientationtrans.set_rotation(self.state[2])
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
+    
+    def make_rectangle(self, grid_map, x, y, h, w, num):
+        for i in range(h):
+            for j in range(w):
+                try:
+                    if not grid_map[x+i][y+j]:
+                        grid_map[x+i][y+j] = num
+                except:
+                    None
 
     def show(self):
         wall = np.where(self.map==1)
         obstacle = np.where(self.map==2)
-        plt.cla()
-        plt.plot(wall[0], wall[1], "ob")
+        # plt.cla()
+        plt.gca().set_aspect('equal', adjustable='box')
+        plt.plot(wall[0], wall[1], "sb")
         plt.plot(obstacle[0], obstacle[1], "og")
-        plt.plot(int(self.state[0]/self.xyreso), int(self.state[1]/self.xyreso), "or")
+        plt.plot(int(self.state[0]/self.xyreso), int(self.state[1]/self.xyreso), "ob")
+        plt.plot(int(self.goal[0]/self.xyreso), int(self.goal[1]/self.xyreso), "or")
         plt.pause(0.1)
