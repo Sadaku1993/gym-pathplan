@@ -11,6 +11,8 @@ from gym.utils import seeding
 import sys
 import os
 
+from function.raycast import *
+
 class Sample(gym.Env):
     metadata = {'render.modes' : ['human', 'rgb_array']}
 
@@ -100,7 +102,7 @@ class Sample(gym.Env):
                 break
         
         # state [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)
-        self.state = np.array([self.start[0], self.start[1], 0.0, 0.0, 0.0])  
+        self.state = np.array([self.start[0], self.start[1], math.radians(90), 0.0, 0.0])  
         self.observation = self.observe()
         self.done = False
 
@@ -124,6 +126,10 @@ class Sample(gym.Env):
         return self.observation, reward, self.done, {}
 
     def observe(self):
+        Raycast = raycast(self.state[0:3], self.map, self.map_size, 
+                                self.xyreso, self.yawreso,
+                                self.min_range, self.max_range, self.angle_limit)
+        self.lidar = Raycast.raycasting()
         observation = {'state': self.state,
                        'goal' : self.goal}
         return observation
@@ -305,11 +311,26 @@ class Sample(gym.Env):
                 self.obstacletrans.set_translation(ix*scale_width, iy*scale_height)
                 self.viewer.add_geom(obstacle)
 
+            for lidar in self.lidar:
+                scan = rendering.make_capsule(np.sqrt(lidar[0]**2+lidar[1]**2)/self.xyreso*scale_width, 2.0)
+                self.scantrans= rendering.Transform()
+                scan.add_attr(self.scantrans)
+                scan.set_color(0.0, 1.0, 0.0)
+                self.viewer.add_geom(scan)
+
+                pose_x = self.state[0]/self.xyreso * scale_width
+                pose_y = self.state[1]/self.xyreso * scale_height
+
+                self.scantrans.set_translation(pose_x, pose_y)
+                self.scantrans.set_rotation(self.state[2]-lidar[2])
+
         robot_x = self.state[0]/self.xyreso * scale_width
         robot_y = self.state[1]/self.xyreso * scale_height
         self.robottrans.set_translation(robot_x, robot_y)
         self.orientationtrans.set_translation(robot_x, robot_y)
         self.orientationtrans.set_rotation(self.state[2])
+
+                
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
     
     def make_rectangle(self, grid_map, x, y, h, w, num):

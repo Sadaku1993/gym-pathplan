@@ -57,8 +57,8 @@ class raycast(object):
         return transform_position
 
     def rotation(self, pose, obstacle_position):
-        rotation = np.array([[math.cos(-pose[2]), -math.sin(-pose[2])],
-                             [math.sin(-pose[2]),  math.cos(-pose[2])]]);
+        rotation = np.array([[math.cos(-pose[2]), math.sin(-pose[2])],
+                             [-math.sin(-pose[2]),  math.cos(-pose[2])]]);
         rotation_position = np.zeros(obstacle_position.shape)
         for i in range(obstacle_position.shape[0]):
             rotation_position[i] = np.dot(rotation, obstacle_position[i])
@@ -130,6 +130,8 @@ class raycast(object):
 
         raycast_array = np.array(raycast_map)
 
+        print("raycast_array:", raycast_array)
+
         for lidar in lidar_array:
             print("x:%6.2f y:%6.2f dis:%6.2f yaw:%6.2f id:%3d shot:%s" % 
                   (lidar.px, lidar.py, lidar.d, lidar.angle, lidar.angleid, lidar.init))
@@ -138,8 +140,8 @@ class raycast(object):
 
     def show(self, obstacle, pose, raycast, title):
         plt.title(title)
-        plt.xlim(-self.grid_size*self.xyreso*0.75, self.grid_size*self.xyreso*0.75)
-        plt.ylim(-self.grid_size*self.xyreso*0.75, self.grid_size*self.xyreso*0.75)
+        plt.xlim(-self.grid_size*self.xyreso, self.grid_size*self.xyreso)
+        plt.ylim(-self.grid_size*self.xyreso, self.grid_size*self.xyreso)
         for x, y in zip(raycast.T[0], raycast.T[1]):
            plt.plot([0.0, x], [0.0, y], 'c-')
         plt.plot(obstacle.T[0], obstacle.T[1], "ob")

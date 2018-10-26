@@ -9,7 +9,7 @@ observation = env.reset()
 print('start', observation['state'])
 print('goal', observation['goal'])
 
-env.show()
+# env.show()
 
 for _ in range(1000):
     env.render()
