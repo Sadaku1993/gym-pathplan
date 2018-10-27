@@ -1,29 +1,27 @@
 #coding:utf-8
 
 import numpy as np
-import matplotlib.pyplot as plt
 import math
-
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
-
 import sys
 import os
 
 from function.raycast import *
 
-class Sample(gym.Env):
+class Simple(gym.Env):
     metadata = {'render.modes' : ['human', 'rgb_array']}
+
 
     def __init__(self):
         # world param
-        self.map_size = 100   # [cell]
-        self.xyreso   = 0.25  # [m] 
-        self.dt = 0.1 # [s]
+        self.map_size = 1000
+        self.xyreso = 0.1
+        self.dt = 0.1
 
         # robot param
-        self.robot_radius = 0.3 # [m]
+        self.robot_radius = 0.3 #[m]
 
         # action param
         self.max_velocity = 1.0   # [m/s]
@@ -36,10 +34,9 @@ class Sample(gym.Env):
         self.max_angular_acceleration = math.radians(40) # [rad/ss]
 
         # lidar param
-        self.yawreso = math.radians(20) # [rad]
+        self.yawreso = math.radians(45) # [rad]
         self.min_range = 0.30 # [m]
-        self.max_range = 10.0 # [m]
-        self.angle_limit = math.radians(270) # [rad]
+        self.max_range = 50.0 # [m]
         self.lidar_num = int(round(self.angle_limit/self.yawreso)+1)
 
         # set action_space (velocity[m/s], omega[rad/s])
@@ -62,52 +59,13 @@ class Sample(gym.Env):
         self.viewer = None
 
     def reset(self):
-        self.map = self.reset_map() # [cell]
-        
-        while True:
-            # static start and goal position
-            # start = np.array([25, 25], dtype=np.int32)
-            # goal  = np.array([75, 25], dtype=np.int32)
-
-            # random start and goal position
-            start = np.array((np.random.rand(2) * self.map_size), dtype=np.int32) # [m] 
-            goal  = np.array((np.random.rand(2) * self.map_size), dtype=np.int32) # [y]
-            # yaw = np.random.rand(1) * math.pi * 2
-
-            obstacle = np.where(self.map)
-            s_min_distance = self.map_size*self.xyreso
-            g_min_distance = self.map_size*self.xyreso
-
-            for ox, oy in zip(obstacle[0], obstacle[1]):
-                s_distance = math.sqrt((start[0]-ox)**2+(start[1]-oy)**2)*self.xyreso
-                g_distance = math.sqrt((goal[0]-oy)**2+(goal[1]-oy)**2)*self.xyreso
-                if s_distance < s_min_distance:
-                    s_min_distance = s_distance
-                if g_distance < g_min_distance:
-                    g_min_distance = g_distance
-
-            # print("s_min_distance:", s_min_distance)
-            # print("g_min_distance:", g_min_distance)
-            # print("min_distance", self.robot_radius*4)
-
-            if self.map[start[0]][start[1]] or self.map[goal[0]][goal[1]]:
-                print("obstacle is put")
-            elif s_min_distance<self.robot_radius*4 or g_min_distance<self.robot_radius*4:
-                print("obstacle is near")
-            elif np.all(start==goal):
-                print("start and goal position is same")
-            else:
-                self.start = start * self.xyreso
-                self.goal = goal * self.xyreso
-                break
-        
-        # state [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)
-        self.state = np.array([self.start[0], self.start[1], math.radians(90), 0.0, 0.0])  
+        self.map = self.reset_map()
+         # state [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)
+        self.state = np.array(20, 20, math.radians(90), 0.0, 0.0])  
         self.observation = self.observe()
         self.done = False
-
         return self.observation
-
+    
     def step(self, action):
         self.state[0] += action[0] * math.cos(self.state[2]) * self.dt
         self.state[1] += action[0] * math.sin(self.state[2]) * self.dt
@@ -124,7 +82,7 @@ class Sample(gym.Env):
         reward = self.reward()
         self.done = self.is_done(True)
         return self.observation, reward, self.done, {}
-
+    
     def observe(self):
         Raycast = raycast(self.state[0:3], self.map, self.map_size, 
                                 self.xyreso, self.yawreso,
@@ -133,50 +91,25 @@ class Sample(gym.Env):
         observation = {'state': self.state,
                        'goal' : self.goal}
         return observation
-    
-    def reward(self):
-        reward = 0
-        if self.is_goal():
-            reward = 100
-        elif not self.is_movable():
-            reward = -5
-        elif self.is_collision():
-            reward = -5
-        else:
-            reward = -1
-
-        return reward
 
     def reset_map(self):
-        grid_map = np.zeros((self.map_size,self.map_size), dtype=np.int32)
-        # wall
-        for i in range(0,self.map_size):
+        grid_map = np.zeros((self.map_size, self.map_size), dtype=np.int32)
+        for i in range(0, self.map_size):
             grid_map[i][0] = 1
             grid_map[i][self.map_size-1] = 1
-        for j in range(0,self.map_size):
-            grid_map[0][j] = 1
-            grid_map[self.map_size-1][j] = 1
-        
-        # 真ん中あたりの壁
-        height = 1
-        width = int(self.map_size*0.25)
-        self.make_rectangle(grid_map, 0, self.map_size/2-height/2, width, height, 1)
-        self.make_rectangle(grid_map, int(self.map_size*0.75), self.map_size/2-height/2, width, height, 1)
-
-        # obstacle
-        ox = np.array((np.random.rand(10) * self.map_size), dtype=np.int32)
-        oy = np.array((np.random.rand(10) * self.map_size), dtype=np.int32)
-        wall = np.where(grid_map)
-        for ix, iy in zip(ox, oy):
-            min_distance = self.map_size*self.xyreso
-            for wx, wy in zip(wall[0], wall[1]):
-                distance = math.sqrt((wx-ix)**2+(wy-iy)**2)*self.xyreso
-                if distance < min_distance:
-                    min_distance = distance
-            if not grid_map[ix][iy] and self.robot_radius*4<min_distance:
-                grid_map[ix][iy] = 2
-
+            grid_map[0][i] = 1
+            grid_map[self.map_size-1][i] = 1
         return grid_map
+
+    def reward(self):
+        if self.is_goal():
+            return 100
+        elif not self.is_movable():
+            return -5
+        elif self.is_collision():
+            return -5
+        else:
+            return = -1
 
     def is_done(self, show=False):
         return (not self.is_movable(show)) or self.is_collision(show) or self.is_goal(show)
@@ -216,13 +149,12 @@ class Sample(gym.Env):
                 break
         
         return flag
-
+    
     def render(self, mode='human', close=False):
         screen_width  = 600
         screen_height = 600
         scale_width = screen_width / float(self.map_size)
         scale_height = screen_height / float(self.map_size)
-
 
         from gym.envs.classic_control import rendering
         if self.viewer is None:
@@ -302,16 +234,6 @@ class Sample(gym.Env):
             orientation.set_color(0.0, 1.0, 0.0)
             self.viewer.add_geom(orientation)
 
-            # obstacle
-            index = np.where(self.map==2)
-            for ix, iy in zip(index[0], index[1]):
-                obstacle = rendering.make_circle(self.robot_radius/self.xyreso*scale_width)
-                self.obstacletrans = rendering.Transform()
-                obstacle.add_attr(self.obstacletrans)
-                obstacle.set_color(0.0, 1.0, 0.0)
-                self.obstacletrans.set_translation(ix*scale_width, iy*scale_height)
-                self.viewer.add_geom(obstacle)
-                
         robot_x = self.state[0]/self.xyreso * scale_width
         robot_y = self.state[1]/self.xyreso * scale_height
         
@@ -327,26 +249,12 @@ class Sample(gym.Env):
         self.robottrans.set_translation(robot_x, robot_y)
         self.orientationtrans.set_translation(robot_x, robot_y)
         self.orientationtrans.set_rotation(self.state[2])
-
                 
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
-    
-    def make_rectangle(self, grid_map, x, y, h, w, num):
-        for i in range(h):
-            for j in range(w):
-                try:
-                    if not grid_map[x+i][y+j]:
-                        grid_map[x+i][y+j] = num
-                except:
-                    None
+ 
 
-    def show(self):
-        wall = np.where(self.map==1)
-        obstacle = np.where(self.map==2)
-        # plt.cla()
-        plt.gca().set_aspect('equal', adjustable='box')
-        plt.plot(wall[0], wall[1], "sb")
-        plt.plot(obstacle[0], obstacle[1], "og")
-        plt.plot(int(self.state[0]/self.xyreso), int(self.state[1]/self.xyreso), "ob")
-        plt.plot(int(self.goal[0]/self.xyreso), int(self.goal[1]/self.xyreso), "or")
-        plt.pause(0.1)
+    
+
+
+
+

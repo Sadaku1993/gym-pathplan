@@ -87,6 +87,8 @@ class raycast(object):
 
             if(self.max_range<d):
                 d = self.max_range
+            elif(d<self.min_range):
+                d = self.min_range
 
             angleid = calc_angleid(angle, self.yawreso)
 
