@@ -110,7 +110,7 @@ class raycast(object):
             if not lidar.init:
                 x = lidar.d*math.cos(angle)
                 y = lidar.d*math.sin(angle)
-                raycast_map.append([x, y, angle])
+                raycast_map.append([x, y, angle, lidar.d])
         raycast_array = np.array(raycast_map)
         
         return raycast_array

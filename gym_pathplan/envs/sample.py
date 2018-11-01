@@ -319,7 +319,7 @@ class Sample(gym.Env):
            scan = rendering.make_capsule(np.sqrt(lidar[0]**2+lidar[1]**2)/self.xyreso*scale_width, 2.0)
            self.scantrans= rendering.Transform()
            scan.add_attr(self.scantrans)
-           scan.set_color(0.0, 0.0, 1.0)
+           scan.set_color(0.0, 1.0, 1.0)
            self.scantrans.set_translation(robot_x, robot_y)
            self.scantrans.set_rotation(self.state[2]+lidar[2])
            self.viewer.add_onetime(scan)

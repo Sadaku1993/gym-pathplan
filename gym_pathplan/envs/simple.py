@@ -16,8 +16,8 @@ class Simple(gym.Env):
 
     def __init__(self):
         # world param
-        self.map_size = 1000
-        self.xyreso = 0.1
+        self.map_size = 200
+        self.xyreso = 0.25
         self.dt = 0.1
 
         # robot param
@@ -36,8 +36,8 @@ class Simple(gym.Env):
         # lidar param
         self.yawreso = math.radians(45) # [rad]
         self.min_range = 0.30 # [m]
-        self.max_range = 50.0 # [m]
-        self.lidar_num = int(round(self.angle_limit/self.yawreso)+1)
+        self.max_range = 25.0 # [m]
+        self.lidar_num = int(round(math.radians(360)/self.yawreso)+1)
 
         # set action_space (velocity[m/s], omega[rad/s])
         self.action_low  = np.array([self.min_velocity, self.min_angular_velocity]) 
@@ -50,10 +50,15 @@ class Simple(gym.Env):
         # state [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)]
         self.state_low  = np.array([0.0, 0.0, self.min_yawrate, self.min_velocity, self.min_angular_velocity])
         self.state_high = np.array([0.0, 0.0, self.max_yawrate, self.max_velocity, self.max_angular_velocity])
+
+        # map
+        self.map_low = np.full((self.map_size, self.map_size), 0)
+        self.map_high = np.full((self.map_size, self.map_size), 100)
         self.observation_space = spaces.Dict({
             "state": spaces.Box(self.state_low, self.state_high, dtype=np.float32),
-            "lidar": spaces.Box(low=self.min_range, high=self.max_range, shape=(self.lidar_num, )),
+            "lidar": spaces.Box(low=self.min_range, high=self.max_range, shape=(self.lidar_num, 4)),
             "goal" : spaces.Box(low=0.0, high=self.map_size*self.xyreso, shape=(2, )),
+            "map" : spaces.Box(low=self.map_low, high=self.map_high, dtype=np.int32)
             })
 
         self.viewer = None
@@ -61,7 +66,8 @@ class Simple(gym.Env):
     def reset(self):
         self.map = self.reset_map()
          # state [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)
-        self.state = np.array(20, 20, math.radians(90), 0.0, 0.0])  
+        self.state = np.array([20, 20, math.radians(90), 0.0, 0.0])
+        self.goal = np.array([40, 40])
         self.observation = self.observe()
         self.done = False
         return self.observation
@@ -86,10 +92,12 @@ class Simple(gym.Env):
     def observe(self):
         Raycast = raycast(self.state[0:3], self.map, self.map_size, 
                                 self.xyreso, self.yawreso,
-                                self.min_range, self.max_range, self.angle_limit)
+                                self.min_range, self.max_range, math.radians(360))
         self.lidar = Raycast.raycasting()
         observation = {'state': self.state,
-                       'goal' : self.goal}
+                       'lidar': self.lidar,
+                       'goal' : self.goal,
+                       'map' : self.map}
         return observation
 
     def reset_map(self):
@@ -109,7 +117,7 @@ class Simple(gym.Env):
         elif self.is_collision():
             return -5
         else:
-            return = -1
+            return -1
 
     def is_done(self, show=False):
         return (not self.is_movable(show)) or self.is_collision(show) or self.is_goal(show)
@@ -193,24 +201,6 @@ class Simple(gym.Env):
             self.walltrans.set_rotation(math.pi/2)
             self.viewer.add_geom(wall)
 
-            wall = rendering.make_capsule(self.map_size*0.25*scale_width,
-                                          self.robot_radius/self.xyreso*scale_width)
-            self.walltrans = rendering.Transform()
-            wall.add_attr(self.walltrans)
-            wall.set_color(0, 0, 0)
-            self.walltrans.set_translation(0, self.map_size*0.5*scale_height)
-            self.walltrans.set_rotation(0)
-            self.viewer.add_geom(wall)
-
-            wall = rendering.make_capsule(self.map_size*0.25*scale_width, 
-                                          self.robot_radius/self.xyreso*scale_width)
-            self.walltrans = rendering.Transform()
-            wall.add_attr(self.walltrans)
-            wall.set_color(0, 0, 0)
-            self.walltrans.set_translation(self.map_size*0.75*scale_width, self.map_size/2*scale_height)
-            self.walltrans.set_rotation(0)
-            self.viewer.add_geom(wall)
-
             # goal
             goal = rendering.make_circle(self.robot_radius/self.xyreso*scale_width)
             self.goaltrans = rendering.Transform()
@@ -241,7 +231,10 @@ class Simple(gym.Env):
            scan = rendering.make_capsule(np.sqrt(lidar[0]**2+lidar[1]**2)/self.xyreso*scale_width, 2.0)
            self.scantrans= rendering.Transform()
            scan.add_attr(self.scantrans)
-           scan.set_color(0.0, 0.0, 1.0)
+           if int(round(lidar[2]))==0:
+               scan.set_color(0.5, 1.0, 0.5)
+           else:
+               scan.set_color(0.0, 1.0, 1.0)
            self.scantrans.set_translation(robot_x, robot_y)
            self.scantrans.set_rotation(self.state[2]+lidar[2])
            self.viewer.add_onetime(scan)
@@ -251,10 +244,3 @@ class Simple(gym.Env):
         self.orientationtrans.set_rotation(self.state[2])
                 
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
- 
-
-    
-
-
-
-
