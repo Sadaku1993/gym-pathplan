@@ -12,10 +12,10 @@ for _ in range(10000):
     action = env.action_space.sample()
     observation, reward, done, _ = env.step(action)
 
-    obstacle = np.where(observation['map']==1)
-    plt.gca().set_aspect('equal', adjustable='box')
-    plt.plot(obstacle[0], obstacle[1], "og")
-    plt.pause(0.01)
+    # obstacle = np.where(observation['map']==1)
+    # plt.gca().set_aspect('equal', adjustable='box')
+    # plt.plot(obstacle[0], obstacle[1], "og")
+    # plt.pause(0.01)
 
     if done:
         break

@@ -29,8 +29,7 @@ class lidarinfo:
         return str(self.px) + "," + str(self.py) + "," + str(self.d) + "," + str(self.angle) + "," + str(self.angleid) + "," + str(self.init)
 
 class raycast(object):
-    def __init__(self, pose, grid_map, grid_size, xyreso, yawreso, 
-                 min_range, max_range, angle_limit):
+    def __init__(self, pose, grid_map, grid_size, xyreso, yawreso, min_range, max_range):
         self.pose      = pose
         self.grid_map  = grid_map
         self.grid_size = grid_size
@@ -38,7 +37,6 @@ class raycast(object):
         self.yawreso   = yawreso
         self.min_range = min_range
         self.max_range = max_range
-        self.angle_limit = angle_limit
 
     def calc_obstacle_position(self):
         obstacle_grid = np.where(0<self.grid_map)
@@ -110,13 +108,29 @@ class raycast(object):
             if not lidar.init:
                 x = lidar.d*math.cos(angle)
                 y = lidar.d*math.sin(angle)
-                raycast_map.append([x, y, angle, lidar.d])
+                raycast_map.append([x, y, angle, lidar.d, int(lidar.angleid)])
         raycast_array = np.array(raycast_map)
-        
-        return raycast_array
-        # plt.cla()
-        # plt.plot(rotation_position.T[0], rotation_position.T[1], "ob")
-        # plt.plot(0, 0, "or")
+
+        # plt.gca().set_aspect('equal', adjustable='box')
+        # plt.plot(obstacle_position.T[0], obstacle_position.T[1], "og")
+        # plt.plot(self.pose[0], self.pose[1], "ob")
+        # plt.show()
+
+        # plt.gca().set_aspect('equal', adjustable='box')
+        # plt.plot(transform_position.T[0], transform_position.T[1], "og")
+        # plt.plot(0, 0, "ob")
+        # plt.show()
+
+        # plt.gca().set_aspect('equal', adjustable='box')
+        # plt.plot(rotation_position.T[0], rotation_position.T[1], "og")
+        # plt.plot(0, 0, "ob")
+        # plt.show()
+
+        # plt.gca().set_aspect('equal', adjustable='box')
+        # plt.plot(rotation_position.T[0], rotation_position.T[1], "og")
+        # plt.plot(0, 0, "ob")
         # for x, y in zip(raycast_array.T[0], raycast_array.T[1]):
         #    plt.plot([0.0, x], [0.0, y], 'c-')
         # plt.show()
+        
+        return raycast_array

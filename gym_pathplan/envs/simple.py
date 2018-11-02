@@ -13,7 +13,6 @@ from function.raycast import *
 class Simple(gym.Env):
     metadata = {'render.modes' : ['human', 'rgb_array']}
 
-
     def __init__(self):
         # world param
         self.map_size = 200
@@ -21,7 +20,7 @@ class Simple(gym.Env):
         self.dt = 0.1
 
         # robot param
-        self.robot_radius = 0.3 #[m]
+        self.robot_radius = 0.5 #[m]
 
         # action param
         self.max_velocity = 1.0   # [m/s]
@@ -34,7 +33,7 @@ class Simple(gym.Env):
         self.max_angular_acceleration = math.radians(40) # [rad/ss]
 
         # lidar param
-        self.yawreso = math.radians(45) # [rad]
+        self.yawreso = math.radians(10) # [rad]
         self.min_range = 0.30 # [m]
         self.max_range = 25.0 # [m]
         self.lidar_num = int(round(math.radians(360)/self.yawreso)+1)
@@ -62,11 +61,13 @@ class Simple(gym.Env):
             })
 
         self.viewer = None
+        self.vis_lidar = False
 
     def reset(self):
         self.map = self.reset_map()
-         # state [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)
-        self.state = np.array([20, 20, math.radians(90), 0.0, 0.0])
+        # state [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)
+        self.state = np.array([10, 10, math.radians(90), 0.0, 0.0])
+        # goal [x(m), y(m)]
         self.goal = np.array([40, 40])
         self.observation = self.observe()
         self.done = False
@@ -92,7 +93,7 @@ class Simple(gym.Env):
     def observe(self):
         Raycast = raycast(self.state[0:3], self.map, self.map_size, 
                                 self.xyreso, self.yawreso,
-                                self.min_range, self.max_range, math.radians(360))
+                                self.min_range, self.max_range)
         self.lidar = Raycast.raycasting()
         observation = {'state': self.state,
                        'lidar': self.lidar,
@@ -159,8 +160,8 @@ class Simple(gym.Env):
         return flag
     
     def render(self, mode='human', close=False):
-        screen_width  = 600
-        screen_height = 600
+        screen_width  = 1000
+        screen_height = 1000
         scale_width = screen_width / float(self.map_size)
         scale_height = screen_height / float(self.map_size)
 
@@ -201,6 +202,15 @@ class Simple(gym.Env):
             self.walltrans.set_rotation(math.pi/2)
             self.viewer.add_geom(wall)
 
+            # start
+            start = rendering.make_circle(self.robot_radius/self.xyreso*scale_width)
+            self.starttrans = rendering.Transform()
+            start.add_attr(self.starttrans)
+            start.set_color(0.0, 0.0, 1.0)
+            self.starttrans.set_translation(self.state[0]/self.xyreso*scale_width, 
+                    self.state[1]/self.xyreso*scale_height)
+            self.viewer.add_geom(start)
+
             # goal
             goal = rendering.make_circle(self.robot_radius/self.xyreso*scale_width)
             self.goaltrans = rendering.Transform()
@@ -227,20 +237,23 @@ class Simple(gym.Env):
         robot_x = self.state[0]/self.xyreso * scale_width
         robot_y = self.state[1]/self.xyreso * scale_height
         
-        for lidar in self.lidar:
-           scan = rendering.make_capsule(np.sqrt(lidar[0]**2+lidar[1]**2)/self.xyreso*scale_width, 2.0)
-           self.scantrans= rendering.Transform()
-           scan.add_attr(self.scantrans)
-           if int(round(lidar[2]))==0:
-               scan.set_color(0.5, 1.0, 0.5)
-           else:
-               scan.set_color(0.0, 1.0, 1.0)
-           self.scantrans.set_translation(robot_x, robot_y)
-           self.scantrans.set_rotation(self.state[2]+lidar[2])
-           self.viewer.add_onetime(scan)
-
         self.robottrans.set_translation(robot_x, robot_y)
         self.orientationtrans.set_translation(robot_x, robot_y)
         self.orientationtrans.set_rotation(self.state[2])
+        
+        if self.vis_lidar:
+            for lidar in self.lidar:
+               if lidar[4]%2==0:
+                   continue
+               scan = rendering.make_capsule(np.sqrt(lidar[0]**2+lidar[1]**2)/self.xyreso*scale_width, 2.0)
+               self.scantrans= rendering.Transform()
+               scan.add_attr(self.scantrans)
+               if int(round(lidar[2]))==0:
+                   scan.set_color(0.5, 1.0, 0.5)
+               else:
+                   scan.set_color(0.0, 1.0, 1.0)
+               self.scantrans.set_translation(robot_x, robot_y)
+               self.scantrans.set_rotation(self.state[2]+lidar[2])
+               self.viewer.add_onetime(scan)
                 
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
