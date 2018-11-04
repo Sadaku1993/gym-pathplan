@@ -20,7 +20,7 @@ class Simple(gym.Env):
         self.dt = 0.1
 
         # robot param
-        self.robot_radius = 0.4 #[m]
+        self.robot_radius = 0.7 #[m]
 
         # action param
         self.max_velocity = 1.0   # [m/s]
@@ -61,7 +61,7 @@ class Simple(gym.Env):
             })
 
         self.viewer = None
-        self.vis_lidar = True
+        self.vis_lidar = False
 
     def reset(self):
         self.map = self.reset_map()
@@ -206,7 +206,7 @@ class Simple(gym.Env):
             start = rendering.make_circle(self.robot_radius/self.xyreso*scale_width)
             self.starttrans = rendering.Transform()
             start.add_attr(self.starttrans)
-            start.set_color(0.0, 0.0, 1.0)
+            start.set_color(0.5, 1.0, 0.5)
             self.starttrans.set_translation(self.state[0]/self.xyreso*scale_width, 
                     self.state[1]/self.xyreso*scale_height)
             self.viewer.add_geom(start)
