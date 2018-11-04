@@ -20,7 +20,7 @@ class Simple(gym.Env):
         self.dt = 0.1
 
         # robot param
-        self.robot_radius = 0.5 #[m]
+        self.robot_radius = 0.4 #[m]
 
         # action param
         self.max_velocity = 1.0   # [m/s]
@@ -61,7 +61,7 @@ class Simple(gym.Env):
             })
 
         self.viewer = None
-        self.vis_lidar = False
+        self.vis_lidar = True
 
     def reset(self):
         self.map = self.reset_map()
@@ -160,8 +160,8 @@ class Simple(gym.Env):
         return flag
     
     def render(self, mode='human', close=False):
-        screen_width  = 1000
-        screen_height = 1000
+        screen_width  = 500
+        screen_height = 500
         scale_width = screen_width / float(self.map_size)
         scale_height = screen_height / float(self.map_size)
 
