@@ -1,5 +1,4 @@
 # OpenAI Gym original environments
-OpenAI Gymの自前環境の作成方法[参照](https://qiita.com/ohtaman/items/edcb3b0a2ff9d48a7def)
 
 ## Requirement 
 - python2.7
