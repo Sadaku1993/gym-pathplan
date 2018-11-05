@@ -61,7 +61,7 @@ class Simple(gym.Env):
             })
 
         self.viewer = None
-        self.vis_lidar = False
+        self.vis_lidar = True
 
     # 状態を初期化し、初期の観測値を返す
     def reset(self):
@@ -247,11 +247,11 @@ class Simple(gym.Env):
 
         robot_x = self.state[0]/self.xyreso * scale_width
         robot_y = self.state[1]/self.xyreso * scale_height
-        
+
         self.robottrans.set_translation(robot_x, robot_y)
         self.orientationtrans.set_translation(robot_x, robot_y)
         self.orientationtrans.set_rotation(self.state[2])
-        
+               
         if self.vis_lidar:
             for lidar in self.lidar:
                if lidar[4]%2==0: # 全部かしかしたら見づらいので間引く
@@ -266,5 +266,12 @@ class Simple(gym.Env):
                self.scantrans.set_translation(robot_x, robot_y)
                self.scantrans.set_rotation(self.state[2]+lidar[2])
                self.viewer.add_onetime(scan)
-                
+            
+            robot = rendering.make_circle(self.robot_radius/self.xyreso*scale_width)
+            self.robottrans = rendering.Transform()
+            robot.add_attr(self.robottrans)
+            robot.set_color(0.0, 0.0, 1.0)
+            self.robottrans.set_translation(robot_x, robot_y)
+            self.viewer.add_onetime(robot)
+
         return self.viewer.render(return_rgb_array = mode=='rgb_array')
