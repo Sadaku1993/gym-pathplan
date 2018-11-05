@@ -63,6 +63,7 @@ class Simple(gym.Env):
         self.viewer = None
         self.vis_lidar = False
 
+    # 状態を初期化し、初期の観測値を返す
     def reset(self):
         self.map = self.reset_map()
         # state [x(m), y(m), yaw(rad), v(m/s), omega(rad/s)
@@ -73,6 +74,7 @@ class Simple(gym.Env):
         self.done = False
         return self.observation
     
+    # actionを実行し、結果を返す
     def step(self, action):
         self.state[0] += action[0] * math.cos(self.state[2]) * self.dt
         self.state[1] += action[0] * math.sin(self.state[2]) * self.dt
@@ -90,7 +92,9 @@ class Simple(gym.Env):
         self.done = self.is_done(True)
         return self.observation, reward, self.done, {}
     
+    # 観測結果を表示
     def observe(self):
+        # Raycasting
         Raycast = raycast(self.state[0:3], self.map, self.map_size, 
                                 self.xyreso, self.yawreso,
                                 self.min_range, self.max_range)
@@ -101,6 +105,7 @@ class Simple(gym.Env):
                        'map' : self.map}
         return observation
 
+    # grid_mapを初期化
     def reset_map(self):
         grid_map = np.zeros((self.map_size, self.map_size), dtype=np.int32)
         for i in range(0, self.map_size):
@@ -109,7 +114,8 @@ class Simple(gym.Env):
             grid_map[0][i] = 1
             grid_map[self.map_size-1][i] = 1
         return grid_map
-
+    
+    # 報酬値を返す
     def reward(self):
         if self.is_goal():
             return 100
@@ -120,9 +126,11 @@ class Simple(gym.Env):
         else:
             return -1
 
+    # 終端状態か確認
     def is_done(self, show=False):
         return (not self.is_movable(show)) or self.is_collision(show) or self.is_goal(show)
 
+    # ゴールに到達したかを判定
     def is_goal(self, show=False):
         if math.sqrt( (self.state[0]-self.goal[0])**2 + (self.state[1]-self.goal[1])**2 ) <= self.robot_radius:
             if show:
@@ -131,6 +139,7 @@ class Simple(gym.Env):
         else:
             return False
 
+    # 移動可能範囲内に存在するか
     def is_movable(self, show=False):
         x = int(self.state[0]/self.xyreso)
         y = int(self.state[1]/self.xyreso)
@@ -142,6 +151,7 @@ class Simple(gym.Env):
                 print("%f %f is not movable area" % (x*self.xyreso, y*self.xyreso))
             return False
 
+    # 衝突判定
     def is_collision(self, show=False):
         flag = False
         x = int(self.state[0]/self.xyreso) #[cell]
@@ -159,6 +169,7 @@ class Simple(gym.Env):
         
         return flag
     
+    # レンダリング
     def render(self, mode='human', close=False):
         screen_width  = 500
         screen_height = 500
@@ -243,7 +254,7 @@ class Simple(gym.Env):
         
         if self.vis_lidar:
             for lidar in self.lidar:
-               if lidar[4]%2==0:
+               if lidar[4]%2==0: # 全部かしかしたら見づらいので間引く
                    continue
                scan = rendering.make_capsule(np.sqrt(lidar[0]**2+lidar[1]**2)/self.xyreso*scale_width, 2.0)
                self.scantrans= rendering.Transform()
