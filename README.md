@@ -24,7 +24,10 @@ env.reset()
 
 for _ i in range(1000):
     env.render()
-    env.step(env.action_space.sample()) # take a random action
+    observation, reward, done, _ = env.step(env.action_space.sample()) # take a random action
+
+    if done:
+        env.reset()
 ```
 
 It should look someting like this
