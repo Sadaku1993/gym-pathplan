@@ -21,10 +21,10 @@ env = gym.make('Simple-v0')
 
 observation = env.reset()
 
-for _ in range(1000):
+for _ in range(10000):
     env.render()
     action = env.action_space.sample()
     observation, reward, done, _ = env.step(action)
 
     if done:
-        break
+        env.reset()
