@@ -61,7 +61,7 @@ class Simple(gym.Env):
             })
 
         self.viewer = None
-        self.vis_lidar = True
+        self.vis_lidar = False
 
     # 状態を初期化し、初期の観測値を返す
     def reset(self):
